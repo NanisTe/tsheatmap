@@ -34,7 +34,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Datetime"
 #' @importFrom ggplot2 geom_hline
 #' @importFrom ggplot2 geom_point
 #'
-#'
+#' @export
 #' @param data a data.frame with at least one column of POSIXct values.
 #' @param tzone give the timezone format to be used. default = "UTC"
 #' @param datetime_colname column name of the column with POSIXct values of the data.frame \code{data}
@@ -43,8 +43,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Datetime"
 #' @param ylab y axis label of the plot
 #' @param LegendTitle legend title of the plot
 #' @return a heatmap of the timeseries data as plotly object
-#' @export
-heatmapDatetimes <- function(data,
+tsheatmap <- function(data,
                              # timesteps = lubridate::as.difftime(1, units = "hours"), # to be used if aggregates and disaggregates are going to be implemented
                              tzone = "UTC",
                              datetime_colname = "Datetime",
