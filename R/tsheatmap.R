@@ -11,7 +11,8 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Datetime"
                                                         ,"Data"
                                                         ,"tile_ID"
                                                         ,"aes"
-                                                        ,"diff_num"))
+                                                        ,"diff_num"
+                                                        ,"tz"))
 #' Heatmap Plot of Timeseries
 #'
 #' This function creates a plotly object with the heatmap of the timeseries data.frame.
@@ -45,15 +46,11 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Datetime"
 #' @param LegendTitle legend title of the plot
 #' @return a heatmap of the timeseries data as plotly object
 #' @export
-tsheatmap <- function(data,
-                      tzone = "UTC",
-                      datetime_colname = "Datetime",
-                      data_colname = NULL,
-                      z_limits = NULL,
-                      x_label = "ISO week",
-                      y_label = "Day of the week",
-                      LegendTitle = ""){
-
+tsheatmap <- function(data,tzone = "UTC",datetime_colname = "Datetime",data_colname = NULL,z_limits = NULL,x_label = "ISO week",y_label = "Day of the week",LegendTitle = ""){
+  # data = data.frame with an unduplicated timeseries column in POSIXct format
+  # tzone = string of the timezone the plot shall be
+  #
+  #
   #TODO:  add arguments to aggregate data within the tsheatmap function
   #       timesteps = lubridate::as.difftime(1, units = "hours"),
 
@@ -71,15 +68,6 @@ tsheatmap <- function(data,
       base::colnames()
     data_colname <- c_names[1] # choose first column of data frame if data_colname is.null
     }
-
-
-  #' <!--######################################################################%##
-  #                                                                              #
-  ####                             1 Input Checks                             ####
-  #                                                                              #
-  ##%##########################################################################%##
-  #' -->  # 1 Input Checks
-  #' <!--  98311be45ae642d3a52660856199c561 -->
 
   # heatmap_data = data %>% select((datetime_colname),(data_colname))
 
@@ -213,8 +201,7 @@ tsheatmap <- function(data,
         #   as.numeric(min_day_datetime - Datetime,
         #              units = units(ref_difftime))/fac + 1/fac) %>%
         # test
-        ,tile_ID = dayfactor[paste0("d",lubridate::wday(date))]*dt_per_day +
-          diff_num + 1/fac) %>%
+        ,tile_ID = dayfactor[paste0("d",lubridate::wday(date))]*dt_per_day + diff_num + 1/fac) %>%
       dplyr::mutate(datapoints = dplyr::n()
                     ,daylightsavinghours_per_day = sum(daylightsaving)
                     ,is_day_of_timeshift = ifelse(!(daylightsavinghours_per_day %in% c(0,dt_per_day)),T,F)) %>%
@@ -264,8 +251,8 @@ tsheatmap <- function(data,
                   , aes(x = weeknum,
                         y = tile_ID,
                         fill = Data,
-                        text = sprintf("Datetime: %s<br>Day: %s<br>Value: %f<br>Week: %f<br>ID: %f"
-                                       ,Datetime, weekday, Data, weeknum, tile_ID)
+                        text = sprintf("Datetime: %s<br>tz: %s<br>Day: %s<br>Value: %f<br>Week: %f<br>ID: %f<br>Diffnum: %f"
+                                       ,Datetime, tz, weekday, Data, weeknum, tile_ID, diff_num)
                   )
         ) +
         viridis::scale_fill_viridis(

@@ -4,9 +4,16 @@
 \alias{tsheatmap}
 \title{Heatmap Plot of Timeseries}
 \usage{
-tsheatmap(data, tzone = "UTC", datetime_colname = "Datetime",
-  data_colname = NULL, z_limits = NULL, x_label = "ISO week",
-  y_label = "Day of the week", LegendTitle = "")
+tsheatmap(
+  data,
+  tzone = "UTC",
+  datetime_colname = "Datetime",
+  data_colname = NULL,
+  z_limits = NULL,
+  x_label = "ISO week",
+  y_label = "Day of the week",
+  LegendTitle = ""
+)
 }
 \arguments{
 \item{data}{a data.frame with at least one column of POSIXct values.}
