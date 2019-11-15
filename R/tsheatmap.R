@@ -9,8 +9,9 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Datetime"
                                                         ,"."
                                                         ,"weekday"
                                                         ,"Data"
-                                                        ,"test"
-                                                        ,"aes"))
+                                                        ,"tile_ID"
+                                                        ,"aes"
+                                                        ,"diff_num"))
 #' Heatmap Plot of Timeseries
 #'
 #' This function creates a plotly object with the heatmap of the timeseries data.frame.
@@ -38,23 +39,29 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Datetime"
 #' @param tzone give the timezone format to be used. default = "UTC"
 #' @param datetime_colname column name of the column with POSIXct values of the data.frame \code{data}
 #' @param data_colname column name of the column with values to be plotted of the data.frame \code{data}
-#' @param xlab x axis label of the plot
-#' @param ylab y axis label of the plot
+#' @param z_limits a vector of two numeric \code{c(min,max)} e.g \code{c(0,100)} to scale the heatmap colors.
+#' @param x_label x axis label of the plot
+#' @param y_label y axis label of the plot
 #' @param LegendTitle legend title of the plot
 #' @return a heatmap of the timeseries data as plotly object
 #' @export
 tsheatmap <- function(data,
-                             # timesteps = lubridate::as.difftime(1, units = "hours"), # to be used if aggregates and disaggregates are going to be implemented
-                             tzone = "UTC",
-                             datetime_colname = "Datetime",
-                             data_colname = NULL,
-                             xlab = "ISO week",
-                             ylab = "",
-                             LegendTitle = ""){
+                      tzone = "UTC",
+                      datetime_colname = "Datetime",
+                      data_colname = NULL,
+                      z_limits = NULL,
+                      x_label = "ISO week",
+                      y_label = "Day of the week",
+                      LegendTitle = ""){
+
+  #TODO:  add arguments to aggregate data within the tsheatmap function
+  #       timesteps = lubridate::as.difftime(1, units = "hours"),
 
   # browser()
-  #TODO: check number of columns of data.frame
-  #TODO: check if datetime column is available & if it is POSIXct
+  #TODO:  check number of columns of data.frame
+  #TODO:  check if datetime column is available & if it is POSIXct
+  #
+  #TODO: Check input data
   #
   # Check if data_colname is given:
   if(is.null(data_colname)){
@@ -76,10 +83,10 @@ tsheatmap <- function(data,
 
   # heatmap_data = data %>% select((datetime_colname),(data_colname))
 
-  dt_orig = lubridate::as.difftime(1, units = "hours")
-  dt_aggr = 1/24
-  # factors
-  dt_factor = dt_aggr/as.numeric(dt_orig,"days")
+  # dt_orig = lubridate::as.difftime(1, units = "hours")
+  # dt_aggr = 1/24
+  # # factors
+  # dt_factor = dt_aggr/as.numeric(dt_orig,"days")
 
 
   # get number of timesteps per day of timedifferences in the data
@@ -92,6 +99,7 @@ tsheatmap <- function(data,
   dt_per_day <-
     diff(data[,datetime_colname]) %>%
     unique.POSIXlt() %>%
+    abs() %>%
     min() %>%
     (function(x){units(x) <- "days";return(x)}) %>%
     as.numeric() %>%
@@ -104,7 +112,7 @@ tsheatmap <- function(data,
     lubridate::wday(label = T, abbr = T, week_start = 1) %>%
     levels()
   # weekdays_abbr <- c("Mo.", "Di.", "Mi.", "Do.", "Fr.", "Sa.", "So.") # TODO: make it multi lang
-  hourdays = as.character(seq(0, dt_per_day - 1 )) # TODO: is that needed?
+  # hourdays = as.character(seq(0, dt_per_day - 1 )) # TODO: is that needed?
 
 
   # tzone = "Europe/Zurich"
@@ -116,13 +124,13 @@ tsheatmap <- function(data,
 
   ref_difftime <- as.difftime(1,units = "hours")
 
-  timediff <- as.difftime(15,units = "mins") # testthat
-  timediff = diff(data[,datetime_colname])
-  timediff_unit = timediff %>% units()
+  # timediff <- as.difftime(15,units = "mins") # testthat
+  timediff <- diff(data[,datetime_colname])
+  timediff_unit <- timediff %>% units()
 
 
   #TODO: check if unique is of length 1 and which time difference to take if there are multiple
-  tdiff <- unique(timediff) %>% as.difftime(units = timediff_unit)
+  tdiff <- unique(timediff) %>% as.difftime(units = timediff_unit) %>% abs() %>% min()
   units(tdiff) <- units(ref_difftime)
 
   fac = as.numeric(tdiff)
@@ -163,17 +171,18 @@ tsheatmap <- function(data,
     dplyr::ungroup()
 
 
-  # Check for Datetime issues.
+  # Check for Datetime issues. ----
   #
   # get_expected_timeseries(heatmap_data
   #                         ,tz = "Europe/Zurich"
   #                         ,timesteps = lubridate::as.difftime(1,units = "hours")
   #                         ,format = "%Y-%m-%d %H:%M:%S")
   #
-  # get_unexpected_datetimes(heatmap_data
-  #                          ,expected_timezone = "Europe/Zurich"
-  #                          ,expected_timesteps = lubridate::as.difftime(1,units = "hours")
-  #                          ,format = "%Y-%m-%d %H:%M:%S")
+  # get_unexpected_datetimes(data
+  #                          ,expected_timezone = "UTC"
+  #                          ,expected_timesteps = tdiff
+  #                          ,format = "%Y-%m-%d %H:%M:%S"
+  #                          ,show_offset = c(0))
   # show_unexpected_datetimes(heatmap_data
   #                           ,expected_timezone = "Europe/Zurich"
   #                           ,expected_timesteps = lubridate::as.difftime(1,units="hours")
@@ -188,7 +197,7 @@ tsheatmap <- function(data,
   #
 
 
-
+  # Calculate everything on daily basis by grouping by weeks and days -----
   (
     heatmap_data <-
       heatmap_data %>%
@@ -196,19 +205,24 @@ tsheatmap <- function(data,
       dplyr::mutate(
         min_day_datetime = min(Datetime)
         ,tz = lubridate::tz(Datetime)
-        # ,test = dayfactor[paste0("d",wday(date))]*24+revcumsum(c(1,as.numeric(diff(Datetime))))) %>%
+        ,diff_num = dt_per_day - (difftime(Datetime,date,units = units(tdiff)) %>% as.numeric(units=units(tdiff))/fac)
+        # ,tile_ID = dayfactor[paste0("d",wday(date))]*24+revcumsum(c(1,as.numeric(diff(Datetime))))) %>%
         # dt_per_day = 24 hours per day or 48 half hours per day etc.
-        ,test = dayfactor[paste0("d",lubridate::wday(date))]*dt_per_day +
-          as.numeric(min_day_datetime - Datetime,
-                     units = units(ref_difftime))/fac + 1/fac) %>%
+#original
+        # ,tile_ID = dayfactor[paste0("d",lubridate::wday(date))]*dt_per_day +
+        #   as.numeric(min_day_datetime - Datetime,
+        #              units = units(ref_difftime))/fac + 1/fac) %>%
+        # test
+        ,tile_ID = dayfactor[paste0("d",lubridate::wday(date))]*dt_per_day +
+          diff_num + 1/fac) %>%
       dplyr::mutate(datapoints = dplyr::n()
                     ,daylightsavinghours_per_day = sum(daylightsaving)
                     ,is_day_of_timeshift = ifelse(!(daylightsavinghours_per_day %in% c(0,dt_per_day)),T,F)) %>%
       # filter(is_day_of_timeshift & datapoints > 24) %>%
       # cerrecting timeshifts of day light saving
-      dplyr::mutate(test = dplyr::if_else(datapoints <= dt_per_day, test + 1/fac, test)
-                    ,test = dplyr::if_else(is_day_of_timeshift & datapoints > dt_per_day, test + 1/fac, test)
-                    ,test = dplyr::if_else(is_day_of_timeshift & daylightsaving & datapoints <= dt_per_day , test - 1/fac, test)) %>%
+      dplyr::mutate(tile_ID = dplyr::if_else(datapoints <= dt_per_day, tile_ID + 1/fac, tile_ID)
+                    ,tile_ID = dplyr::if_else(is_day_of_timeshift & datapoints > dt_per_day, tile_ID + 1/fac, tile_ID)
+                    ,tile_ID = dplyr::if_else(is_day_of_timeshift & daylightsaving & datapoints <= dt_per_day , tile_ID - 1/fac, tile_ID)) %>%
       dplyr::ungroup() %>%
       dplyr::mutate(
         weekday = weekdays_abbr[lubridate::wday(x = date,week_start = getOption("lubridate.week.start",1))]
@@ -224,7 +238,9 @@ tsheatmap <- function(data,
   has_timeshift = lubridate::dst(heatmap_data$Datetime) %>% any
 
 
-  z_limits = c(min(heatmap_data$Data),max(heatmap_data$Data))
+  if( is.null( z_limits ) | length(z_limits) != 2 & class(z_limits) == "numeric"){
+    z_limits = c(min(heatmap_data$Data),max(heatmap_data$Data))
+  }
 
   # find id of first day in month
   first_days <-
@@ -234,7 +250,7 @@ tsheatmap <- function(data,
 
   id_first_day = which(heatmap_data$Datetime %in% first_days)
   data_first_day = data.frame(x = heatmap_data$weeknum[id_first_day],
-                              y = heatmap_data$test[id_first_day],
+                              y = heatmap_data$tile_ID[id_first_day],
                               year = heatmap_data$year[id_first_day])
 
 
@@ -246,10 +262,10 @@ tsheatmap <- function(data,
         ggplot2::ggplot()  +
         ggplot2::geom_tile(data = heatmap_data
                   , aes(x = weeknum,
-                        y = test,
+                        y = tile_ID,
                         fill = Data,
                         text = sprintf("Datetime: %s<br>Day: %s<br>Value: %f<br>Week: %f<br>ID: %f"
-                                       ,Datetime, weekday, Data, weeknum, test)
+                                       ,Datetime, weekday, Data, weeknum, tile_ID)
                   )
         ) +
         viridis::scale_fill_viridis(
@@ -259,25 +275,22 @@ tsheatmap <- function(data,
           direction = 1,
           na.value = "red") +
         # added if else to consider daylight shifting where one sunday has 25 instead of 24 hours
-        ggplot2::geom_hline(yintercept = seq(0.5,
-                                             7*dt_per_day + 0.5,
-                                             by = dt_per_day) + if (T) {c(0,rep(2/fac,7))}else{0},
+        ggplot2::geom_hline(yintercept = dayfactor*dt_per_day + 1/fac + 0.5,
                             color = "white") +
         ggplot2::geom_point(data = subset(heatmap_data, Datetime %in% first_days),
-                            aes(x = weeknum,y = test), pch = 3, color = "white") +
+                            aes(x = weeknum,y = tile_ID), pch = 3, color = "white") +
         ggplot2::facet_wrap('plotyear', ncol = 1) +
-        ggplot2::scale_x_continuous(name = "Kalenderwoche (KW)",
+        ggplot2::scale_x_continuous(name = x_label,
                                     expand = c(0,0),
                                     breaks = seq(min(heatmap_data$weeknum,na.rm = T),
                                                  max(heatmap_data$weeknum,na.rm = T),
                                                  length = 13),
+                                    # minor_breaks = unique(heatmap_data$weeknum) %>% sort() , # TODO: add minor labels with weeknum see https://stackoverflow.com/questions/39717545/add-secondary-x-axis-labels-to-ggplot-with-one-x-axis
                                     labels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
                                                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan")) +
-        ggplot2::scale_y_discrete(name = "Wochentag",
+        ggplot2::scale_y_discrete(name = y_label,
                                   expand = c(0, 0),
-                                  limits = seq(dt_per_day/2 + 0.5 ,
-                                               7*dt_per_day + 0.5,
-                                               by = dt_per_day ),
+                                  limits = dayfactor*dt_per_day - dt_per_day/2 + 1/fac + 0.5,
                                   labels = rev(c("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")))
     ) %>%
     plotly::ggplotly()

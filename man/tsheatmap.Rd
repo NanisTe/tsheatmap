@@ -5,8 +5,8 @@
 \title{Heatmap Plot of Timeseries}
 \usage{
 tsheatmap(data, tzone = "UTC", datetime_colname = "Datetime",
-  data_colname = NULL, xlab = "ISO week", ylab = "",
-  LegendTitle = "")
+  data_colname = NULL, z_limits = NULL, x_label = "ISO week",
+  y_label = "Day of the week", LegendTitle = "")
 }
 \arguments{
 \item{data}{a data.frame with at least one column of POSIXct values.}
@@ -17,17 +17,16 @@ tsheatmap(data, tzone = "UTC", datetime_colname = "Datetime",
 
 \item{data_colname}{column name of the column with values to be plotted of the data.frame \code{data}}
 
-\item{xlab}{x axis label of the plot}
+\item{z_limits}{a vector of two numeric \code{c(min,max)} e.g \code{c(0,100)} to scale the heatmap colors.}
 
-\item{ylab}{y axis label of the plot}
+\item{x_label}{x axis label of the plot}
+
+\item{y_label}{y axis label of the plot}
 
 \item{LegendTitle}{legend title of the plot}
 }
 \value{
 a heatmap of the timeseries data as plotly object
-<!--######################################################################%##
--->  # 1 Input Checks
-<!--  98311be45ae642d3a52660856199c561 -->
 }
 \description{
 This function creates a plotly object with the heatmap of the timeseries data.frame.
