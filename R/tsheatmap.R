@@ -65,8 +65,10 @@ tsheatmap <- function(data,tzone = "UTC",datetime_colname = "Datetime",data_coln
     c_names <-
       data %>%
       dplyr::select(-(datetime_colname)) %>%
+      dplyr::select_if(is.numeric) %>%
       base::colnames()
     data_colname <- c_names[1] # choose first column of data frame if data_colname is.null
+    warning("data_colname argument empty: Choosing first numeric column named \"",data_colname,"\"")
     }
 
   # heatmap_data = data %>% select((datetime_colname),(data_colname))
