@@ -44,9 +44,10 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Datetime"
 #' @param x_label x axis label of the plot
 #' @param y_label y axis label of the plot
 #' @param LegendTitle legend title of the plot
+#' @param na.value.col a color value for all na values in the heatmap
 #' @return a heatmap of the timeseries data as plotly object
 #' @export
-tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = "Datetime",z_limits = NULL,x_label = "ISO week",y_label = "Day of the week",LegendTitle = ""){
+tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = "Datetime",z_limits = NULL,x_label = "ISO week",y_label = "Day of the week",LegendTitle = "",na.value.col = "red"){
   # data = data.frame with an unduplicated timeseries column in POSIXct format
   # tzone = string of the timezone the plot shall be
   #
@@ -266,7 +267,7 @@ tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = 
           name = LegendTitle,# TODO: Legend name from function argument
           option = 'D', # plasma "D" = viridis
           direction = 1,
-          na.value = "red") +
+          na.value = na.value.col) +
         # added if else to consider daylight shifting where one sunday has 25 instead of 24 hours
         ggplot2::geom_hline(yintercept = (dayfactor+1)*dt_per_day + 2* 1/fac + 0.5,
                             color = "white") +

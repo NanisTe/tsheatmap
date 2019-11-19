@@ -12,7 +12,8 @@ tsheatmap(
   z_limits = NULL,
   x_label = "ISO week",
   y_label = "Day of the week",
-  LegendTitle = ""
+  LegendTitle = "",
+  na.value.col = "red"
 )
 }
 \arguments{
@@ -31,6 +32,8 @@ tsheatmap(
 \item{y_label}{y axis label of the plot}
 
 \item{LegendTitle}{legend title of the plot}
+
+\item{na.value.col}{a color value for all na values in the heatmap}
 }
 \value{
 a heatmap of the timeseries data as plotly object
