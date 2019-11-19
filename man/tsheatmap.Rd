@@ -6,9 +6,9 @@
 \usage{
 tsheatmap(
   data,
+  data_colname = NULL,
   tzone = "UTC",
   datetime_colname = "Datetime",
-  data_colname = NULL,
   z_limits = NULL,
   x_label = "ISO week",
   y_label = "Day of the week",
@@ -18,11 +18,11 @@ tsheatmap(
 \arguments{
 \item{data}{a data.frame with at least one column of POSIXct values.}
 
+\item{data_colname}{column name of the column with values to be plotted of the data.frame \code{data}}
+
 \item{tzone}{give the timezone format to be used. default = "UTC"}
 
 \item{datetime_colname}{column name of the column with POSIXct values of the data.frame \code{data}}
-
-\item{data_colname}{column name of the column with values to be plotted of the data.frame \code{data}}
 
 \item{z_limits}{a vector of two numeric \code{c(min,max)} e.g \code{c(0,100)} to scale the heatmap colors.}
 

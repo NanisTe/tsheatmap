@@ -46,7 +46,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Datetime"
 #' @param LegendTitle legend title of the plot
 #' @return a heatmap of the timeseries data as plotly object
 #' @export
-tsheatmap <- function(data,tzone = "UTC",datetime_colname = "Datetime",data_colname = NULL,z_limits = NULL,x_label = "ISO week",y_label = "Day of the week",LegendTitle = ""){
+tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = "Datetime",z_limits = NULL,x_label = "ISO week",y_label = "Day of the week",LegendTitle = ""){
   # data = data.frame with an unduplicated timeseries column in POSIXct format
   # tzone = string of the timezone the plot shall be
   #
@@ -150,7 +150,8 @@ tsheatmap <- function(data,tzone = "UTC",datetime_colname = "Datetime",data_coln
     # filter(year(Datetime) == 2016) %>%
     dplyr::mutate(Datetime = lubridate::with_tz(Datetime,tzone = tzone)) %>%
     dplyr::mutate(weeknum = lubridate::isoweek(Datetime)
-                  ,date = lubridate::date(Datetime)
+                  ,date = paste0(date(Datetime)," 00:00:00") %>%
+                    as.POSIXct(tz=tzone)
                   ,year = lubridate::year(Datetime)
                   ,month = lubridate::month(Datetime)
                   ,weeknum = as.numeric(strftime(date, format = "%V"))
@@ -209,9 +210,12 @@ tsheatmap <- function(data,tzone = "UTC",datetime_colname = "Datetime",data_coln
                     ,is_day_of_timeshift = ifelse(!(daylightsavinghours_per_day %in% c(0,dt_per_day)),T,F)) %>%
       # filter(is_day_of_timeshift & datapoints > 24) %>%
       # cerrecting timeshifts of day light saving
+      #
+      #TODO: Daylight saving in october see: Ternadata
       dplyr::mutate(tile_ID = dplyr::if_else(datapoints <= dt_per_day, tile_ID + 1/fac, tile_ID)
                     ,tile_ID = dplyr::if_else(is_day_of_timeshift & datapoints > dt_per_day, tile_ID + 1/fac, tile_ID)
                     ,tile_ID = dplyr::if_else(is_day_of_timeshift & daylightsaving & datapoints <= dt_per_day , tile_ID - 1/fac, tile_ID)) %>%
+      #
       dplyr::ungroup() %>%
       dplyr::mutate(
         weekday = weekdays_abbr[lubridate::wday(x = date,week_start = getOption("lubridate.week.start",1))]
@@ -264,7 +268,7 @@ tsheatmap <- function(data,tzone = "UTC",datetime_colname = "Datetime",data_coln
           direction = 1,
           na.value = "red") +
         # added if else to consider daylight shifting where one sunday has 25 instead of 24 hours
-        ggplot2::geom_hline(yintercept = dayfactor*dt_per_day + 1/fac + 0.5,
+        ggplot2::geom_hline(yintercept = (dayfactor+1)*dt_per_day + 2* 1/fac + 0.5,
                             color = "white") +
         ggplot2::geom_point(data = subset(heatmap_data, Datetime %in% first_days),
                             aes(x = weeknum,y = tile_ID), pch = 3, color = "white") +
@@ -279,7 +283,7 @@ tsheatmap <- function(data,tzone = "UTC",datetime_colname = "Datetime",data_coln
                                                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan")) +
         ggplot2::scale_y_discrete(name = y_label,
                                   expand = c(0, 0),
-                                  limits = dayfactor*dt_per_day - dt_per_day/2 + 1/fac + 0.5,
+                                  limits = (dayfactor+1)*dt_per_day - dt_per_day/2 + 1/fac + 0.5,
                                   labels = rev(c("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")))
     ) %>%
     plotly::ggplotly()
