@@ -232,7 +232,7 @@ tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = 
 
 
   if( is.null( z_limits ) | length(z_limits) != 2 & class(z_limits) == "numeric"){
-    z_limits = c(min(heatmap_data$Data),max(heatmap_data$Data))
+    z_limits = c(min(heatmap_data$Data,na.rm = T),max(heatmap_data$Data,na.rm = T))
   }
 
   # find id of first day in month
