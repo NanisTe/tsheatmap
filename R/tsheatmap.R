@@ -80,6 +80,7 @@ tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = 
     diff(data[,datetime_colname]) %>%
     unique.POSIXlt() %>%
     abs() %>%
+    .[.>0] %>%
     min() %>%
     (function(x){units(x) <- "days";return(x)}) %>%
     as.numeric() %>%
@@ -101,7 +102,7 @@ tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = 
   timediff <- diff(data[,datetime_colname])
   timediff_unit <- timediff %>% units()
   #TODO: check if unique is of length 1 and which time difference to take if there are multiple
-  tdiff <- unique(timediff) %>% as.difftime(units = timediff_unit) %>% abs() %>% min()
+  tdiff <- unique(timediff) %>% as.difftime(units = timediff_unit) %>% abs() %>% .[. > 0] %>% min()
 
   # set reference time difference unit to major time difference ----
   units(tdiff) <- units(ref_difftime)
@@ -126,7 +127,7 @@ tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = 
 
   heatmap_data <-
     data %>%
-    dplyr::select((datetime_colname),
+    dplyr::select(Datetime = (datetime_colname),
                   Data = (data_colname)) %>%
     dplyr::mutate(Datetime = lubridate::with_tz(Datetime,tzone = tzone)) %>%
     dplyr::mutate(weeknum = lubridate::isoweek(Datetime)
@@ -144,6 +145,7 @@ tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = 
 
   # Check for Datetime issues. ----
   # future feature ?
+  # TODO: duplicates throw error !!!
   #
   # get_expected_timeseries(data
   #                         ,tz = "UTC"
@@ -272,7 +274,6 @@ tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = 
     viridis::scale_fill_viridis(
       limits = z_limits,
       name = LegendTitle,
-      # TODO: Legend name from function argument
       option = 'D',
       # plasma "D" = viridis
       direction = 1,
@@ -334,7 +335,7 @@ tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = 
     )
 
 
-  if (ggplot) {
+  if (!ggplot) {
     ret <- plotly::ggplotly(ret)
   }
 
