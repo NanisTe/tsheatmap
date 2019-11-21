@@ -74,19 +74,6 @@ tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = 
     warning("data_colname argument empty: Choosing first numeric column named \"",data_colname,"\"")
     }
 
-  # heatmap_data = data %>% select((datetime_colname),(data_colname))
-
-  # dt_orig = lubridate::as.difftime(1, units = "hours")
-  # dt_aggr = 1/24
-  # # factors
-  # dt_factor = dt_aggr/as.numeric(dt_orig,"days")
-
-
-  # get number of timesteps per day of timedifferences in the data
-  # testthat
-  # testdiff <-
-  #   seq.POSIXt(as.POSIXct("2015-01-01 00:15:00"),as.POSIXct("2015-01-04 00:15:00"), by = "15 mins") %>%
-  #   .[c(1,3:length(.))]
 
   # TODO: make it a function
   dt_per_day <-
@@ -105,30 +92,25 @@ tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = 
     lubridate::wday(label = T, abbr = T, week_start = 1) %>%
     levels()
   # weekdays_abbr <- c("Mo.", "Di.", "Mi.", "Do.", "Fr.", "Sa.", "So.") # TODO: make it multi lang
-  # hourdays = as.character(seq(0, dt_per_day - 1 )) # TODO: is that needed?
 
 
-  # tzone = "Europe/Zurich"
-  # tzone = "UTC"
-
-  # dt_per_day = 24
-  # dt_per_day = 96
-  #
-
+  # set reference time difference ----
   ref_difftime <- as.difftime(1,units = "hours")
 
-  # timediff <- as.difftime(15,units = "mins") # testthat
+  # get the major time difference of the data frames datetime column ----
   timediff <- diff(data[,datetime_colname])
   timediff_unit <- timediff %>% units()
-
-
   #TODO: check if unique is of length 1 and which time difference to take if there are multiple
   tdiff <- unique(timediff) %>% as.difftime(units = timediff_unit) %>% abs() %>% min()
+
+  # set reference time difference unit to major time difference ----
   units(tdiff) <- units(ref_difftime)
 
+  # factor which will be used to count the numbers of tiles in one day
   fac = as.numeric(tdiff)
 
 
+  # parameter to loop through indexes to be used in geom_tile
   dayfactor = c(d1 = 1
                 ,d7 = 2
                 ,d6 = 3
@@ -137,20 +119,15 @@ tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = 
                 ,d3 = 6
                 ,d2 = 7)
 
-  # browser()
+  # preparing Heatmap Data ----
+  #TODO: datetime column is renamed here to Datetime and Datetime is
+  #      used allover the rest of the code. Consider using the user supllied name
+  #      of the datetime column or rename Datetime column after all calculations.
 
   heatmap_data <-
     data %>%
     dplyr::select((datetime_colname),
                   Data = (data_colname)) %>%
-    # #for testing purposes
-    # SBB_Consumption_2015 %>%
-    # select(Datetime
-    #        ,Data = Energie_SBB
-    # ) %>%
-    # ElDat_ohneKKW_mitPV %>%
-    # select(Datetime,Data = Cons_Total_Enduse_ControlBlock) %>%
-    # filter(year(Datetime) == 2016) %>%
     dplyr::mutate(Datetime = lubridate::with_tz(Datetime,tzone = tzone)) %>%
     dplyr::mutate(weeknum = lubridate::isoweek(Datetime)
                   ,date = paste0(date(Datetime)," 00:00:00") %>%
@@ -166,15 +143,16 @@ tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = 
 
 
   # Check for Datetime issues. ----
+  # future feature ?
   #
-  # get_expected_timeseries(heatmap_data
-  #                         ,tz = "Europe/Zurich"
-  #                         ,timesteps = lubridate::as.difftime(1,units = "hours")
+  # get_expected_timeseries(data
+  #                         ,tz = "UTC"
+  #                         ,timestep = lubridate::as.difftime(1,units = "hours")
   #                         ,format = "%Y-%m-%d %H:%M:%S")
   #
   # get_unexpected_datetimes(data
   #                          ,expected_timezone = "UTC"
-  #                          ,expected_timesteps = tdiff
+  #                          ,expected_timesteps = lubridate::as.difftime(1,units = "hours")
   #                          ,format = "%Y-%m-%d %H:%M:%S"
   #                          ,show_offset = c(0))
   # show_unexpected_datetimes(heatmap_data
@@ -182,6 +160,7 @@ tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = 
   #                           ,expected_timesteps = lubridate::as.difftime(1,units="hours")
   #                           ,format = "%Y-%m-%d %H:%M:%S")
 
+  #TODO: Check if this code is still needed
   # # correct for January dates belong to KW 52 oder 53
   # heatmap_data$weeknum[which((heatmap_data$month == 1) & (heatmap_data$weeknum == 52 | heatmap_data$weeknum == 53))] = 0
   #
@@ -197,40 +176,58 @@ tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = 
       heatmap_data %>%
       dplyr::group_by(weeknum,date) %>%
       dplyr::mutate(
-        min_day_datetime = min(Datetime)
-        ,tz = lubridate::tz(Datetime)
-        ,diff_num = dt_per_day - (difftime(Datetime,date,units = units(tdiff)) %>% as.numeric(units=units(tdiff))/fac)
-        # ,tile_ID = dayfactor[paste0("d",wday(date))]*24+revcumsum(c(1,as.numeric(diff(Datetime))))) %>%
-        # dt_per_day = 24 hours per day or 48 half hours per day etc.
-#original
-        # ,tile_ID = dayfactor[paste0("d",lubridate::wday(date))]*dt_per_day +
-        #   as.numeric(min_day_datetime - Datetime,
-        #              units = units(ref_difftime))/fac + 1/fac) %>%
-        # test
-        ,tile_ID = dayfactor[paste0("d",lubridate::wday(date))]*dt_per_day + diff_num + 1/fac) %>%
-      dplyr::mutate(datapoints = dplyr::n()
-                    ,daylightsavinghours_per_day = sum(daylightsaving)
-                    ,is_day_of_timeshift = ifelse(!(daylightsavinghours_per_day %in% c(0,dt_per_day)),T,F)) %>%
+        min_day_datetime = min(Datetime),
+        tz = lubridate::tz(Datetime),
+        diff_num = dt_per_day - (
+          difftime(Datetime, date, units = units(tdiff)) %>% as.numeric(units = units(tdiff)) /
+            fac
+        )
+        ,
+        tile_ID = dayfactor[paste0("d", lubridate::wday(date))] * dt_per_day + diff_num + 1 /
+          fac
+      ) %>%
+      dplyr::mutate(
+        datapoints = dplyr::n(),
+        daylightsavinghours_per_day = sum(daylightsaving),
+        is_day_of_timeshift = ifelse(
+          !(daylightsavinghours_per_day %in% c(0, dt_per_day)),
+          T,
+          F)
+      ) %>%
       # filter(is_day_of_timeshift & datapoints > 24) %>%
       # cerrecting timeshifts of day light saving
       #
-      #TODO: Daylight saving in october see: Ternadata
-      dplyr::mutate(tile_ID = dplyr::if_else(datapoints <= dt_per_day, tile_ID + 1/fac, tile_ID)
-                    ,tile_ID = dplyr::if_else(is_day_of_timeshift & datapoints > dt_per_day, tile_ID + 1/fac, tile_ID)
-                    ,tile_ID = dplyr::if_else(is_day_of_timeshift & daylightsaving & datapoints <= dt_per_day , tile_ID - 1/fac, tile_ID)) %>%
-      #
+      #TODO: Daylight saving in october position of hours (see: Ternadata)
+      dplyr::mutate(
+        tile_ID = dplyr::if_else(datapoints <= dt_per_day, tile_ID + 1 / fac, tile_ID)
+        ,
+        tile_ID = dplyr::if_else(
+          is_day_of_timeshift &
+            datapoints > dt_per_day,
+          tile_ID + 1 / fac,
+          tile_ID
+        )
+        ,
+        tile_ID = dplyr::if_else(
+          is_day_of_timeshift &
+            daylightsaving &
+            datapoints <= dt_per_day ,
+          tile_ID - 1 / fac,
+          tile_ID
+        )
+      ) %>%
       dplyr::ungroup() %>%
       dplyr::mutate(
-        weekday = weekdays_abbr[lubridate::wday(x = date,week_start = getOption("lubridate.week.start",1))]
-        ,plotyear = dplyr::if_else(weeknum == 53 & month == 1, year - 1, year)
-        ,plotyear = dplyr::if_else(weeknum == 1 & month == 12, plotyear + 1, plotyear)
+        weekday = weekdays_abbr[lubridate::wday(x = date,
+                                                week_start = getOption("lubridate.week.start", 1))],
+        plotyear = dplyr::if_else(weeknum == 53 &
+                                    month == 1, year - 1, year),
+        plotyear = dplyr::if_else(weeknum == 1 &
+                                    month == 12, plotyear + 1, plotyear)
       )
-    # filter(plotyear == 2016) # TODO: Week 53 in january days of next year
   )
-  # %>%
-  #   filterXts("2015",tzone="Europe/Zurich")
 
-  # Check if sundays can have 25 hours
+  # Check if there is any daylight saving involved in the applied timezone ----
   has_timeshift = lubridate::dst(heatmap_data$Datetime) %>% any
 
 
