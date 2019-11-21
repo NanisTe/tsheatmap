@@ -13,7 +13,8 @@ tsheatmap(
   x_label = "ISO week",
   y_label = "Day of the week",
   LegendTitle = "",
-  na.value.col = "red"
+  na.value.col = "red",
+  ggplot = F
 )
 }
 \arguments{
