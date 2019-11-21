@@ -17,6 +17,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Datetime"
 #'
 #' This function creates a plotly object with the heatmap of the timeseries data.frame.
 #'
+#'
 #' @importFrom xts xts
 #' @importFrom zoo index
 #' @importFrom lubridate with_tz
@@ -35,6 +36,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Datetime"
 #' @importFrom ggplot2 scale_y_discrete
 #' @importFrom ggplot2 geom_hline
 #' @importFrom ggplot2 geom_point
+#' @importFrom ggplot2 theme
 #'
 #' @param data a data.frame with at least one column of POSIXct values.
 #' @param tzone give the timezone format to be used. default = "UTC"
@@ -47,7 +49,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Datetime"
 #' @param na.value.col a color value for all na values in the heatmap
 #' @return a heatmap of the timeseries data as plotly object
 #' @export
-tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = "Datetime",z_limits = NULL,x_label = "ISO week",y_label = "Day of the week",LegendTitle = "",na.value.col = "red"){
+tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = "Datetime",z_limits = NULL,x_label = "ISO week",y_label = "Day of the week",LegendTitle = "",na.value.col = "red",ggplot = F){
   # data = data.frame with an unduplicated timeseries column in POSIXct format
   # tzone = string of the timezone the plot shall be
   #
@@ -250,44 +252,94 @@ tsheatmap <- function(data,data_colname = NULL,tzone = "UTC",datetime_colname = 
 
 
   # heatmap
-  heatmap_plotly <-
-    (
-      gg.obj <-
-        ggplot2::ggplot()  +
-        ggplot2::geom_tile(data = heatmap_data
-                  , aes(x = weeknum,
-                        y = tile_ID,
-                        fill = Data,
-                        text = sprintf("Datetime: %s<br>tz: %s<br>Day: %s<br>Value: %f<br>Week: %f<br>ID: %f<br>Diffnum: %f"
-                                       ,Datetime, tz, weekday, Data, weeknum, tile_ID, diff_num)
-                  )
-        ) +
-        viridis::scale_fill_viridis(
-          limits = z_limits,
-          name = LegendTitle,# TODO: Legend name from function argument
-          option = 'D', # plasma "D" = viridis
-          direction = 1,
-          na.value = na.value.col) +
-        # added if else to consider daylight shifting where one sunday has 25 instead of 24 hours
-        ggplot2::geom_hline(yintercept = (dayfactor+1)*dt_per_day + 2* 1/fac + 0.5,
-                            color = "white") +
-        ggplot2::geom_point(data = subset(heatmap_data, Datetime %in% first_days),
-                            aes(x = weeknum,y = tile_ID), pch = 3, color = "white") +
-        ggplot2::facet_wrap('plotyear', ncol = 1) +
-        ggplot2::scale_x_continuous(name = x_label,
-                                    expand = c(0,0),
-                                    breaks = seq(min(heatmap_data$weeknum,na.rm = T),
-                                                 max(heatmap_data$weeknum,na.rm = T),
-                                                 length = 13),
-                                    # minor_breaks = unique(heatmap_data$weeknum) %>% sort() , # TODO: add minor labels with weeknum see https://stackoverflow.com/questions/39717545/add-secondary-x-axis-labels-to-ggplot-with-one-x-axis
-                                    labels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan")) +
-        ggplot2::scale_y_discrete(name = y_label,
-                                  expand = c(0, 0),
-                                  limits = (dayfactor+1)*dt_per_day - dt_per_day/2 + 1/fac + 0.5,
-                                  labels = rev(c("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")))
-    ) %>%
-    plotly::ggplotly()
+  ret <-
+    ggplot2::ggplot()  +
+    ggplot2::geom_tile(data = heatmap_data
+                       , aes(
+                         x = weeknum,
+                         y = tile_ID,
+                         fill = Data,
+                         text = sprintf(
+                           "Datetime: %s<br>tz: %s<br>Day: %s<br>Value: %f<br>Week: %f<br>ID: %f<br>Diffnum: %f"
+                           ,
+                           Datetime,
+                           tz,
+                           weekday,
+                           Data,
+                           weeknum,
+                           tile_ID,
+                           diff_num
+                         )
+                       )) +
+    # ggplot2::theme(legend.position = "bottom") +
+    viridis::scale_fill_viridis(
+      limits = z_limits,
+      name = LegendTitle,
+      # TODO: Legend name from function argument
+      option = 'D',
+      # plasma "D" = viridis
+      direction = 1,
+      na.value = na.value.col,
+      # guide = guide_colorbar(
+      #   direction = "horizontal",
+      #   barheight = unit(2, units = "mm"),
+      #   barwidth = unit(50, units = "mm"),
+      #   draw.ulim = F,
+      #   title.position = 'top',
+      #   # some shifting around
+      #   title.hjust = 0.5,
+      #   label.hjust = 0.5
+      # )
+    ) +
+    # added if else to consider daylight shifting where one sunday has 25 instead of 24 hours
+    ggplot2::geom_hline(yintercept = (dayfactor + 1) * dt_per_day + 2 * 1 / fac + 0.5,
+                        color = "white") +
+    ggplot2::geom_point(
+      data = subset(heatmap_data, Datetime %in% first_days),
+      aes(x = weeknum, y = tile_ID),
+      pch = 3,
+      color = "white"
+    ) +
+    ggplot2::facet_wrap('plotyear', ncol = 1) +
+    ggplot2::scale_x_continuous(
+      name = x_label,
+      expand = c(0, 0),
+      breaks = seq(
+        min(heatmap_data$weeknum, na.rm = T),
+        max(heatmap_data$weeknum, na.rm = T),
+        length = 13
+      ),
+      # minor_breaks = unique(heatmap_data$weeknum) %>% sort() , # TODO: add minor labels with weeknum see https://stackoverflow.com/questions/39717545/add-secondary-x-axis-labels-to-ggplot-with-one-x-axis
+      labels = c(
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+        "Jan"
+      )
+    ) +
+    ggplot2::scale_y_discrete(
+      name = y_label,
+      expand = c(0, 0),
+      limits = (dayfactor + 1) * dt_per_day - dt_per_day /
+        2 + 1 / fac + 0.5,
+      labels = rev(c(
+        "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
+      ))
+    )
 
-  return(heatmap_plotly)
+
+  if (ggplot) {
+    ret <- plotly::ggplotly(ret)
+  }
+
+  return(ret)
 }
