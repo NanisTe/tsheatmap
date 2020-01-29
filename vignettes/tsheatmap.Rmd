@@ -1,0 +1,26 @@
+---
+title: "Introduction to tsheatmap"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{tsheatmap}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(tsheatmap)
+```
+
+When having data in form of timeseries, e.g. over the course of a year, this package allows you to plot a heatmap in calendaric form allong a weekly pattern. From left to right you will see columns of the ISOweek over the course of the year or even smaller chunks of timeseries. From top to bottom the data will be plotted from Monday to Sunday in timesteps as the data is given.
+
+In the following a example for electricity consumption and production data of the Swiss transmission grid will be given.
+
+# Data: Swissgrid electricty grid data
+
